@@ -1,10 +1,7 @@
-
-NLP/Metrics/bestmodel
-NLP/Metrics/combined_procedures.csv
-NLP/Metrics/combined_medications.csv
-NLP/Metrics/combined_labs.csv
-NLP/Metrics/combined_diseases2.csv
-NLP/Metrics/combined_signs_and_symptoms.csv
-NLP/Metrics/all_sents.csv
-NLP/Metrics/bestmodel.wv.vectors.npy
-NLP/Metrics/bestmodel.trainables.syn1neg.npy
+flaskr/cosine_model/cosine_similarity_metric
+flaskr/cosine_model/bestmodel.wv.vectors.npy
+flaskr/cosine_model/bestmodel.trainables.syn1neg.npy
+venv
+flaskr/__pycache__
+flaskr/cosine_model/bestmodel
+.idea
