@@ -15,63 +15,59 @@ The way it works is that we calculated NLP metrics including BLUE Score, Cosine 
 
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
+We are working on deploying it to AWS to have more people access it.
 
 ### Prerequisites
-
-What things you need to install the software and how to install them
+Due to Github size constraints, we were unable to upload the complete Word2Vec model to Github.
+After cloning the repository from Github, go to
 
 ```
-Give examples
+https://drive.google.com/open?id=1AIeDjK9UlmhuMU3LNKZrzyKEh9ghm3aQ
+```
+And download the files to the directory
+```
+flaskr/cosine_model
 ```
 
 ### Installing
 
-A step by step series of examples that tell you how to get a development env running
+Run the command
+```
+pip install -e .
+```
+This will install the required dependencies.
 
-Say what the step will be
+Following this, on mac run the commands
 
 ```
-Give the example
+$ export FLASK_APP=flaskr
+$ export FLASK_ENV=development
+$ flask run
+```
+on Windows cmd:
+```
+> set FLASK_APP=flaskr
+> set FLASK_ENV=development
+> flask run
 ```
 
-And repeat
+It is quite likely that the program will be slow, as it runs a number of computationally intensive NLP tasks.
+We are working on deploying the tool to AWS for more computational efficiency and to allow multiple people to access the tool and give feedback data, to create an exhaustive concept accuracy database.
 
-```
-until finished
-```
-
-End with an example of getting some data out of the system or using it for a little demo
 
 ## Running the tests
 
 Explain how to run the automated tests for this system
 
-### Break down into end to end tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-### And coding style tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
 
 ## Deployment
 
-Add additional notes about how to deploy this on a live system
+Follow the flask instructions (https://flask.palletsprojects.com/en/1.1.x/tutorial/deploy/) for details on how to deploy the UI to a production environment.
 
 ## Built With
 
-* [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
-* [Maven](https://maven.apache.org/) - Dependency Management
-* [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
+* [Flask](https://flask.palletsprojects.com/en) - The web framework used
 
 ## Contributing
 
@@ -83,9 +79,11 @@ We use [SemVer](http://semver.org/) for versioning. For the versions available, 
 
 ## Authors
 
-* **Billie Thompson** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
+* **Marcel Schaack** - *Initial work* - [PurpleBooth](https://github.com/marcelschaack)
+* **Lengning Wei** - *Initial work* - [PurpleBooth](https://github.com/LayneWei)
+* **Chloe Kim** - *Initial work* - [PurpleBooth](https://github.com/chloekim)
 
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
+See also the list of [contributors](https://github.com/LayneWei/NLP-Porject/contributors) who participated in this project.
 
 ## License
 
@@ -93,9 +91,9 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Acknowledgments
 
-* Hat tip to anyone whose code was used
-* Inspiration
-* etc
+* Thank you to Gundolf Schenk and Gabriel Gomes for all your helpful adivse throughout the year.
+* We also want to thank the Fung Institute and the Berkeley College of Engineering of helping us!
+
 
 # UC Berkeley MEng Capstone Project: UCSF NLP UI for Apache cTAKES
 
