@@ -63,7 +63,7 @@ Explain how to run the automated tests for this system
 
 ## Deployment
 
-Follow the flask instructions (https://flask.palletsprojects.com/en/1.1.x/tutorial/deploy/) for details on how to deploy the UI to a production environment.
+Follow the [flask instructions](https://flask.palletsprojects.com/en/1.1.x/tutorial/deploy/) for details on how to deploy the UI to a production environment.
 
 ## Built With
 
@@ -79,11 +79,11 @@ We use [SemVer](http://semver.org/) for versioning. For the versions available, 
 
 ## Authors
 
-* **Marcel Schaack** - *Initial work* - [PurpleBooth](https://github.com/marcelschaack)
-* **Lengning Wei** - *Initial work* - [PurpleBooth](https://github.com/LayneWei)
-* **Chloe Kim** - *Initial work* - [PurpleBooth](https://github.com/chloekim)
+* **Marcel Schaack** - *Initial work* - [MarcelSchaack](https://github.com/marcelschaack)
+* **Lengning Wei** - *Initial work* - [LayneWei](https://github.com/LayneWei)
+* **Chloe Kim** - *Initial work* - [ChloeKim](https://github.com/chloekim)
 
-See also the list of [contributors](https://github.com/LayneWei/NLP-Porject/contributors) who participated in this project.
+See also the list of [contributors](https://github.com/LayneWei/NLP-Project/contributors) who participated in this project.
 
 ## License
 
