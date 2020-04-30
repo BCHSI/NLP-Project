@@ -74,6 +74,14 @@ with open(abbreviation_path, 'r') as dictionary:
             line = line.split('-', 1)
             abbreviations_dic[line[0].rstrip().lower()] = line[1].lstrip().lower()
 
+pos_abbs_path = 'flaskr/cosine_model/pos_abbs.txt'
+with open(pos_abbs_path, 'r') as dictionary:
+    pos_abbs_dic = {}
+    for l in dictionary:
+        if len(l) > 1:
+            l = l.split('\t')
+            pos_abbs_dic[l[0]] = l[1]
+
 # important patterns to remove from health records string
 digit_pattern = '\d+'
 date_pattern = r"[\d]{1,2}/[\d]{1,2}/[\d]{2,4}"
@@ -82,6 +90,7 @@ DIGIT_SIGN = '/DIGIT'
 DATE_SIGN = 'DATE'
 TIME_SIGN = 'TIME'
 apas_error = '&apos;'
+
 
 # create Plugin subclass to create clickable graph
 class PluginBase(object):
@@ -104,6 +113,7 @@ class PluginBase(object):
             return ""
 
 
+# create plugin to make clickable graph displaying confidence scores
 class PointClickableHTMLTooltip(PluginBase):
     JAVASCRIPT = """
     mpld3.register_plugin("clickablehtmltooltip", PointClickableHTMLTooltip);
@@ -174,6 +184,7 @@ class PointClickableHTMLTooltip(PluginBase):
                       "voffset": voffset}
 
 
+# class for concepts in each sentence displayed on sentence UI page
 class ConceptsToDisplay:
     def __init__(self, concept_name, highlight, sentence, beginning, highlight_beginning, other_concepts,
                  txt_file):
@@ -192,6 +203,7 @@ class ConceptsToDisplay:
                 self.highlight_broken.append(one_word.lower())
 
 
+# check if file type is allowed
 def allowed_file(filename):
     allowed_extensions = {'csv', 'txt', 'zip'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
@@ -226,11 +238,13 @@ def stripword2(word):
     return word
 
 
+# Calculate levenschtein distance nlp metric
 def levensteindistance(s1, s2):
     if len(s1) > len(s2):
         s1, s2 = s2, s1
 
     distances = range(len(s1) + 1)
+
     for i2, c2 in enumerate(s2):
         distances_ = [i2+1]
         for i1, c1 in enumerate(s1):
@@ -238,14 +252,18 @@ def levensteindistance(s1, s2):
                 distances_.append(distances[i1])
             else:
                 distances_.append(1 + min((distances[i1], distances[i1 + 1], distances_[-1])))
+
         distances = distances_
+
     return distances[-1]
 
 
+# Calculate cosine similarity given two words
 def cosine_similarity(word1, word2):
     return 1 - spatial.distance.cosine(currentmodel.wv[word1], currentmodel.wv[word2])
 
 
+# Calculate cosine similarity of canonical txt vs range txt
 def combined_cosine_similarity(concept, in_txt):
     concept_words = concept.split()
     concept_words = [stripword2(i) for i in concept_words]
@@ -253,6 +271,8 @@ def combined_cosine_similarity(concept, in_txt):
     range_words = [stripword2(i) for i in range_words]
     cosine_average = 0
     count = 0
+
+    # if possible, try to use trigrams or bigrams to calculate cosine similarity
     for m in range(0, len(concept_words)):
         try:
             word1 = '_'.join(concept_words[m:m + 3])
@@ -261,6 +281,7 @@ def combined_cosine_similarity(concept, in_txt):
             count += 1
         except:
             pass
+
     for m in range(0, len(concept_words)):
         try:
             word1 = '_'.join(concept_words[m:m + 2])
@@ -269,6 +290,8 @@ def combined_cosine_similarity(concept, in_txt):
             count += 1
         except:
             pass
+
+    # else compare each for to each other
     if count == 0:
         for word3 in concept_words:
             for word4 in range_words:
@@ -277,12 +300,14 @@ def combined_cosine_similarity(concept, in_txt):
                     count += 1
                 except:
                     pass
+
     if count == 0:
         return 0
     else:
         return cosine_average / count
 
 
+# calculate cosine similarity between canonical and range text using ELMo embeddings
 def combined_cosine_similarity_flair(filename, concept, in_txt):
     if in_txt.lower() in abbreviations_dic:
         in_txt = abbreviations_dic[in_txt.lower()]
@@ -317,6 +342,7 @@ def str2int(v):
         return None
 
 
+# create clickable plot with plugins displaying cofidence score
 def create_figure(confidence_scores, concepts, filename):
     fig, ax = plt.subplots()
     ax.grid(True, alpha=0.3)
@@ -327,6 +353,7 @@ def create_figure(confidence_scores, concepts, filename):
 
     labels = list()
     labels2 = list()
+
     for i in range(len(xs)):
         label = df.iloc[[i], :].T
         label.columns = [str(concepts[i])]
@@ -346,14 +373,10 @@ def create_figure(confidence_scores, concepts, filename):
     plugins.connect(fig, plugins.MouseXPosition())
     plugins.connect(fig, plugins.PointHTMLTooltip(points[0], labels=labels, voffset=10, hoffset=10))
 
-    # fig = Figure()
-    # axis = fig.add_subplot(1, 1, 1)
-    # xs = range(len(confidence_scores))
-    # ys = np.sort(confidence_scores)
-    # axis.plot(xs, ys, 'ro')
     return fig
 
 
+# remove duplicate concepts after reading cTAKES csv file for display
 def remove_duplicates(items):
     for k in range(0, len(items) - 1):
         for j in range(k + 1, len(items)):
@@ -365,21 +388,26 @@ def remove_duplicates(items):
     return items
 
 
+# analyse dependencies for modifier analysis
 def analyse_deps(doc, index):
     dependencies = list()
     sent_length = 0
+
     for i in index:
         if i is None:
             continue
+
         for word in doc.sentences[i].words:
             if word.governor == 0:
                 dependencies.append(['root', word.text])
             else:
                 dependencies.append([word.governor-1+sent_length, word.text])
         sent_length = len(doc.sentences[i].words)
+
     return dependencies
 
 
+# find sentence concept is located in using nltk
 def create_sent(i, token_sent):
     if 0 < i < len(token_sent) - 1:
         sentence = ' '.join([word for word in word_tokenize(token_sent[i - 1])] +
@@ -394,9 +422,11 @@ def create_sent(i, token_sent):
         sentence = ' '.join([word for word in word_tokenize(token_sent[i - 1])] +
                             [word for word in word_tokenize(token_sent[i])])
         j = [i - 1, i]
+
     return sentence, j
 
 
+# find sentence concept is located in using stanfordnlp
 def create_sent_stanford(i, doc):
     if 0 < i < len(doc.sentences) - 1:
         sentence = ' '.join([word.text for word in doc.sentences[i - 1].words] +
@@ -411,12 +441,14 @@ def create_sent_stanford(i, doc):
         sentence = ' '.join([word.text for word in doc.sentences[i - 1].words] +
                             [word.text for word in doc.sentences[i].words])
         j = [i - 1, i]
+
     return sentence, j
 
 
 def get_sentence(text, range_txt, conc_beginning, conc_end):
     txt_length = 0
     token_sent = sent_tokenize(text)
+
     for i, sent in enumerate(token_sent):
         for word in word_tokenize(sent):
             if conc_beginning - 20 <= txt_length:
@@ -430,41 +462,51 @@ def get_sentence(text, range_txt, conc_beginning, conc_end):
             elif conc_end <= txt_length:
                 sentence, j = create_sent(i, token_sent)
                 return j, sentence
+
             txt_length += len(word) + 1
 
 
 def get_sentence_stanford(doc, range_txt, conc_beginning, conc_end):
     txt_length = 0
+
     for i, sent in enumerate(doc.sentences):
         for word in sent.words:
             if conc_beginning - 20 <= txt_length:
                 sentence, j = create_sent_stanford(i, doc)
+
                 if re.sub("\s*", "", range_txt.lower()) not in re.sub("\s*", "", sentence.lower()):
                     continue
                 else:
                     return j, sentence
+
             elif conc_end <= txt_length:
                 sentence, j = create_sent_stanford(i, doc)
                 return j, sentence
+
             txt_length += len(word.text) + 1
 
 
 def get_word_dependents(text, range_txt, conc_beginning, conc_end):
     doc = nlp(text)
+
     index, sentence = get_sentence_stanford(doc, range_txt, conc_beginning, conc_end)
     depend = analyse_deps(doc, index)
     words = [word.text for i in index for word in doc.sentences[i].words if i is not None]
     pos = [word.pos for i in index for word in doc.sentences[i].words if i is not None]
     range_words = range_txt.replace('-', ' - ').split(' ')
+
     for i in range(len(words)):
         flag = 0
+
         for j in range(len(range_words)):
             if range_words[j].lower() == words[i + j].lower():
                 flag += 1
+
                 if flag >= len(range_words):
                     dep_indices = [k for k, value in enumerate(depend) if value[0] in range(i, i + j + 1)]
                     dep_indices2 = [depend[k][0] for k in range(i, i + j + 1) if depend[k][0] != 'root']
                     dep_indices += dep_indices2
+
                     return [[words[l] for l in dep_indices if words[l] not in range_words],
                             [pos[l] for l in dep_indices if words[l] not in range_words]]
 
@@ -496,11 +538,10 @@ def index():
         txt = request.files['txt']
         if txt:
             txtname = secure_filename(txt.filename)
-            # txt.save(os.path.join('/home/TheLumino/UCSF_NLP_UI/Uploads', txtname))
             txt.save(os.path.join('Uploads', txtname))
+
+            # if uploaded file is zip file - extract files inside
             if 'zip' in txtname:
-                # with ZipFile(os.path.join('UCSF_NLP_UI/Uploads', txtname), 'r') as zipObj:
-                    # zipObj.extractall('UCSF_NLP_UI/Uploads')
                 with ZipFile(os.path.join('Uploads', txtname), 'r') as zipObj:
                     zipObj.extractall('Uploads')
 
@@ -552,10 +593,12 @@ def open_file(filename):
                 range_calc = range_txt
 
             bigger = max(len(concept_calc), len(range_calc))
+
+            # claculate all nlp metrics
             levenstein_sim = (bigger - levensteindistance(concept_calc.lower(), range_calc.lower()))/bigger
             cosine_similarity = combined_cosine_similarity(concept_calc.lower(), range_calc.lower())
             jaccard_sim = 1 - nltk.jaccard_distance(set(concept_calc.lower()), set(range_calc.lower()))
-            elmo = combined_cosine_similarity_flair(concept_calc.lower(), range_calc.lower())
+            elmo = combined_cosine_similarity_flair(filename, concept_calc.lower(), range_calc.lower())
 
             similarity_list.append([levenstein_sim, jaccard_sim, cosine_similarity, elmo])
 
@@ -563,36 +606,30 @@ def open_file(filename):
             concepts.append(concept_txt)
             txt_files.append(range_txt)
 
-        confidence_scores = rf_model.predict_proba(np.array(similarity_list))[:,1]
+        # calculate confidence scores for each concept
+        confidence_scores = rf_model.predict_proba(np.array(similarity_list))[:, 1]
 
+        # create figure to display confidence scores
         fig = create_figure(confidence_scores, concepts, filename)
 
-        # if os.path.exists('/home/TheLumino/UCSF_NLP_UI/flaskr/static/plot.html'):
-        #     os.remove('/home/TheLumino/UCSF_NLP_UI/flaskr/static/plot.html')
-        # if os.path.exists('flaskr/static/plot.html'):
-            # os.remove('flaskr/static/plot.html')
-
-        # mpld3.save_html(fig, '/home/TheLumino/UCSF_NLP_UI/flaskr/static/plot.html')
         fig_html = mpld3.fig_to_html(fig)
-        #fig.savefig('/home/TheLumino/UCSF_NLP_UI/flaskr/static/plot.png')
 
+        # class creating flask table that is sortable and displays all concept information
         class ItemTable(Table):
             allow_sort = True
-            # concept_name = Col('Concept Ontology')
-            # note_file = Col('Clincial Note File')
+
             concept_amount = Col('Amount')
             conc_confidence = Col('Confidence Score')
-            # link = LinkCol('')
 
             def sort_url(self, col_key, reverse=False, filename=filename):
-                #filename = 'combined_diseases.csv'
                 if reverse:
                     direction = 'desc'
                 else:
                     direction = 'asc'
+
                 return url_for('note.open_file', sort=col_key, direction=direction, filename=filename)
 
-        # Get some objects
+        # Get some objects for table rows
         class Item(object):
             def __init__(self, concept_name, conc_confidence):
                 self.concept_name = concept_name
@@ -613,9 +650,8 @@ def open_file(filename):
                 return self.conc_confidence
 
         items = list()
+
         for i in range(0, len(concepts)):
-            # attrs = url_for('note.txt_files', conc=concepts[i], filename=filename))
-            # items.append(Item(concepts[i], txt_files[i], element('a', attrs=attrs, content='H')))
             items.append(Item(concepts[i], round(confidence_scores[i], 4)))
 
         items = remove_duplicates(items)
@@ -624,36 +660,37 @@ def open_file(filename):
 
         # Populate the table
         table = ItemTable(items, sort_by=sort, sort_reverse=reverse)
-        for item in items:
+
+        for j in range(len(items)):
             url = 'note.sentence'
-            # conc=item.obtain_name(), filename=filename)
             table.add_column('concept_name', LinkCol(name='Concept Ontology', endpoint=url,
                              url_kwargs=dict(conc='concept_name', filename='filename'),
                              attr='concept_name'))
+
         table.border = True
 
     return render_template('note/concepts.html', table=table, filename=filename,
                            mean=round(float(np.mean(confidence_scores)), 3), fig=fig_html)
 
 
-## After user chooses a specific concept, UI displays all sentences with concept inside to the user
+# After user chooses a specific concept, UI displays all sentences with concept inside to the user
 @bp.route('/<filename>/<conc>', methods=('GET', 'POST'))
 def sentence(filename, conc):
-    # with open(os.path.join('UCSF_NLP_UI/Uploads', filename)) as csvfile:
     with open(os.path.join('Uploads', filename)) as csvfile:
         csvdata = csv.reader(csvfile)
         next(csvdata, None)
+
         txt_files = list()
         conc_beginning = list()
         conc_end = list()
         range_txt = list()
+
         for row in csvdata:
             if row[3] == conc:
                 txt_files.append(row[1])
                 conc_beginning.append(int(row[12]))
                 conc_end.append(int(row[11]))
                 range_txt.append(row[13])
-
 
     concepts_display = list()
 
@@ -663,6 +700,7 @@ def sentence(filename, conc):
             whole_txt = file.read()
             whole_txt = re.sub(apas_error, "'", whole_txt)
 
+        # get sentence each concept is in to display
         index, sentence = get_sentence(whole_txt, range_txt[i], conc_beginning[i], conc_end[i])
         position = sentence.index(range_txt[i])
         end = conc_beginning[i] - position + len(sentence)
@@ -673,28 +711,32 @@ def sentence(filename, conc):
         highlight_beginning = list()
         other_concepts = list()
 
+        # find all other concepts that are also in this sentence
         # with open(os.path.join('UCSF_NLP_UI/Uploads', filename)) as csvfile:
         with open(os.path.join('Uploads', filename)) as csvfile:
             csvdata = csv.reader(csvfile)
             next(csvdata, None)
+
             for row in csvdata:
                 if int(row[12]) >= beginning and int(row[11]) <= end and row[1] == txt:
                     highlight.append(row[13])
                     highlight_beginning.append(row[12])
                     other_concepts.append(row[3])
+
         sentence = sentence.split(' ')
         concepts_display.append(ConceptsToDisplay(concept_name, highlight, sentence, beginning, highlight_beginning,
                                                   other_concepts, txt))
 
     return render_template('note/sentence.html', concept_chosen=conc, filename=filename, concepts_display=concepts_display)
 
-## After concept
+# After concept has been chosen - feedback page that calculates nlp metrics and gives confidence score again
 @bp.route('/<filename>/<concept_chosen>/<i_txt_file>/<beginning>', methods=('GET', 'POST'))
 def display_concept(i_txt_file, concept_chosen, beginning, filename):
     # with open(os.path.join('UCSF_NLP_UI/Uploads', filename)) as csvfile:
     with open(os.path.join('Uploads', filename)) as csvfile:
         csvdata = csv.reader(csvfile)
         next(csvdata, None)
+
         for row in csvdata:
             if row[12] == beginning and row[1] == i_txt_file:
                 hof = str2bool(row[6])
@@ -707,7 +749,6 @@ def display_concept(i_txt_file, concept_chosen, beginning, filename):
                 end = int(row[11])
                 break
 
-
     if "SNOMEDCT" in database:
         url = snomed_url + concept_id
     else:
@@ -718,21 +759,28 @@ def display_concept(i_txt_file, concept_chosen, beginning, filename):
         whole_txt = re.sub(apas_error, "'", whole_txt)
     dependents, poss = get_word_dependents(whole_txt, range_txt_display, int(beginning), end)
 
+    # modifier analysis - do dependency parsing and analyse whether these are relevant words
     if dependents is not None:
         has_deps = 1
         dependencies = list()
         removal = list()
+
         for i, (wrd, pos) in enumerate(zip(dependents, poss)):
             if pos in ['VBD', 'VB', 'VBG', 'VBP', 'VBN', 'EX', 'CC', 'HYPH', '.', ',', 'LS', 'PRP', 'PRP$', 'WDT',
-                       'WP', 'WP$', 'WRB', '-RRB-']:
+                       'WP', 'WP$', 'WRB', '-RRB-', '/', ':']:
                 removal.append([wrd, pos])
             elif wrd.lower() in STOP_WORDS:
                 removal.append([wrd, pos])
+            elif pos in pos_abbs_dic:
+                poss[i] = pos_abbs_dic[pos]
+
         for j in removal:
             dependents.remove(j[0])
             poss.remove(j[1])
+
         for dep, pos in zip(dependents, poss):
             dependencies.append([dep, pos])
+
     else:
         has_deps = 0
 
@@ -775,9 +823,8 @@ def display_concept(i_txt_file, concept_chosen, beginning, filename):
                         (str(dep[0]), str(dep[1]), int(deps_feedback))
                     )
                     db.commit()
-                except:
+                except OSError as err:
                     pass
-
 
         if not request.form['correct'] or not request.form['location'] or not request.form['hof'] \
                 or not request.form['negation']:
@@ -788,6 +835,7 @@ def display_concept(i_txt_file, concept_chosen, beginning, filename):
             location_answ = request.form['location']
             hof_answ = request.form['hof']
             negation_answ = request.form['negation']
+
             db = get_db()
             db.execute(
                 'INSERT INTO feedback (range_txt, concept, negation, hof, location, correct_answ,\
@@ -798,11 +846,12 @@ def display_concept(i_txt_file, concept_chosen, beginning, filename):
                  float(levenstein_sim), float(cosine_similarity_value), float(jaccard_sim), float(cosine_flair))
             )
             db.commit()
+
             return redirect(url_for('note.sentence', filename=filename, conc=concept_chosen))
 
     return render_template('note/concept_display.html', hof=hof, negated=negated, range_txt=range_txt_display,
-                           location=location, concept=concept_to_display, filename=filename, blue=round(blue_score,3),
-                           levenstein=round(levenstein_sim,3), cosine=round(cosine_similarity_value,3),
-                           flair=round(cosine_flair,3), jaccard=round(jaccard_sim,3),
-                           confidence=round(confidence_score,3), i_txt_file=i_txt_file, concept_chosen=concept_chosen, url=url,
-                           has_deps=has_deps, dependencies=dependencies)
+                           location=location, concept=concept_to_display, filename=filename, blue=round(blue_score, 3),
+                           levenstein=round(levenstein_sim, 3), cosine=round(cosine_similarity_value, 3),
+                           flair=round(cosine_flair, 3), jaccard=round(jaccard_sim, 3),
+                           confidence=round(confidence_score,3), i_txt_file=i_txt_file, concept_chosen=concept_chosen,
+                           url=url, has_deps=has_deps, dependencies=dependencies)
